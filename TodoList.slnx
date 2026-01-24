@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="TodoList.Application/TodoList.Application.csproj" Id="e475847e-100f-43f8-93a3-6950b40eebfa" />
+  <Project Path="TodoList.Contracts/TodoList.Contracts.csproj" Id="996a441c-580f-44b0-9616-714103d5b377" />
+  <Project Path="TodoList/TodoList.API.csproj" />
+</Solution>
