@@ -1,48 +1,83 @@
 ﻿using TodoList.Application.Models;
+using TodoList.Application.Database;
+using Dapper;
 
 namespace TodoList.Application.Repositories;
 
 public class TodoRepository : ITodoRepository
 {
-    private readonly List<Todo> _todos = new();
-    public Task<Todo?> GetAsync(Guid id)
+    private readonly IDbConnectionFactory _dbConnectionFactory;
+
+    public TodoRepository(IDbConnectionFactory dbConn)
     {
-        var todo = _todos.SingleOrDefault(x => x.Id == id);
-        return Task.FromResult(todo);
-    }
-    public Task<IEnumerable<Todo>> GetAllAsync()
-    {
-        return Task.FromResult(_todos.AsEnumerable());
+        _dbConnectionFactory = dbConn;
     }
 
-    public Task<bool> CreateAsync(Todo todo)
+    public async Task<Todo?> GetAsync(Guid id)
     {
-        _todos.Add(todo);
-        return Task.FromResult(true);
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync();
+
+        var result = await connection.QuerySingleOrDefaultAsync<Todo>(new CommandDefinition("""
+            select id, todo as Name, is_complete as IsComplete from tbTodo where id = @Id
+            """, new { Id = id }));
+
+        return result;
+    }
+    public async Task<IEnumerable<Todo>> GetAllAsync()
+    {
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync();
+
+        var result = await connection.QueryAsync<Todo>(new CommandDefinition("""
+            select id, todo as Name, is_complete as IsComplete from tbTodo
+            """));
+
+        return result;
     }
 
-    public Task<bool> UpdateAsync(Todo todo)
+    public async Task<bool> CreateAsync(Todo todo)
     {
-        var todoIndex = _todos.FindIndex(x => x.Id == todo.Id);
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync();
 
-        if (todoIndex == -1)
+        var result = await connection.ExecuteAsync(new CommandDefinition("""
+            insert into tbTodo (id, todo, is_complete)
+            values (@Id, @Name, @IsComplete)
+            """, new { Id = todo.Id, Name = todo.Name, IsComplete = todo.IsComplete }));
+
+        return result > 0;
+    }
+
+    public async Task<bool> UpdateAsync(Todo todo)
+    {
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync();
+        using var transaction = connection.BeginTransaction();
+
+        var deleted = await connection.ExecuteAsync(new CommandDefinition("""
+            delete from tbTodo where id = @Id
+            """, new { Id = todo.Id }));
+
+        var result = await connection.ExecuteAsync(new CommandDefinition("""
+            insert into tbTodo (id, todo, is_complete)
+            values (@Id, @Name, @IsComplete)
+            """, new { Id = todo.Id, Name = todo.Name, IsComplete = todo.IsComplete }));
+
+        if (deleted == 0 || result == 0)
         {
-            return Task.FromResult(false);
+            return false;
         }
 
-        _todos[todoIndex] = todo;
-        return Task.FromResult(true);
+        transaction.Commit();
+
+        return result > 0;
     }
 
-    public Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id)
     {
-        var numRemoved = _todos.RemoveAll(x => x.Id == id);
+        using var connection = await _dbConnectionFactory.CreateConnectionAsync();
 
-        if (numRemoved == 0)
-        {
-            return Task.FromResult(false);
-        }
+        var result = await connection.ExecuteAsync(new CommandDefinition("""
+            delete from tbTodo where id = @Id
+            """, new { Id = id }));
 
-        return Task.FromResult(true);
+        return result > 0;
     }
 }
