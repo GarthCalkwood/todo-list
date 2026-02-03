@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using TodoList.Application.Models;
+
 using TodoList.Application.Repositories;
 using TodoList.Contracts.Requests;
 using TodoList.API.Mapping;

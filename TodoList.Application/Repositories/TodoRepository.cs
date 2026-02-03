@@ -1,6 +1,7 @@
-﻿using TodoList.Application.Models;
+﻿using Dapper;
+
+using TodoList.Application.Models;
 using TodoList.Application.Database;
-using Dapper;
 
 namespace TodoList.Application.Repositories;
 
@@ -18,7 +19,7 @@ public class TodoRepository : ITodoRepository
         using var connection = await _dbConnectionFactory.CreateConnectionAsync();
 
         var result = await connection.QuerySingleOrDefaultAsync<Todo>(new CommandDefinition("""
-            select id, todo as Name, is_complete as IsComplete from tbTodo where id = @Id
+            select id, name, is_complete from tbTodo where id = @Id
             """, new { Id = id }));
 
         return result;
@@ -28,7 +29,7 @@ public class TodoRepository : ITodoRepository
         using var connection = await _dbConnectionFactory.CreateConnectionAsync();
 
         var result = await connection.QueryAsync<Todo>(new CommandDefinition("""
-            select id, todo as Name, is_complete as IsComplete from tbTodo
+            select id, name, is_complete from tbTodo
             """));
 
         return result;
@@ -39,7 +40,7 @@ public class TodoRepository : ITodoRepository
         using var connection = await _dbConnectionFactory.CreateConnectionAsync();
 
         var result = await connection.ExecuteAsync(new CommandDefinition("""
-            insert into tbTodo (id, todo, is_complete)
+            insert into tbTodo (id, name, is_complete)
             values (@Id, @Name, @IsComplete)
             """, new { Id = todo.Id, Name = todo.Name, IsComplete = todo.IsComplete }));
 
@@ -56,7 +57,7 @@ public class TodoRepository : ITodoRepository
             """, new { Id = todo.Id }));
 
         var result = await connection.ExecuteAsync(new CommandDefinition("""
-            insert into tbTodo (id, todo, is_complete)
+            insert into tbTodo (id, name, is_complete)
             values (@Id, @Name, @IsComplete)
             """, new { Id = todo.Id, Name = todo.Name, IsComplete = todo.IsComplete }));
 
